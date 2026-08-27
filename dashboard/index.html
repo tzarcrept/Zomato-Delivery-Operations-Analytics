@@ -1,0 +1,955 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Zomato Delivery Operations Analytics — Interactive Dashboard</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+:root {
+  --brand-red: #E23744;
+  --brand-red-light: #FF6B76;
+  --brand-red-faded: #FCE8E9;
+  
+  --sidebar-bg: #111418;
+  --sidebar-hover: #1C2128;
+  --sidebar-text: #A0AEC0;
+  
+  --bg-main: #F7F9FC;
+  --bg-card: #FFFFFF;
+  
+  --text-main: #1A202C;
+  --text-muted: #718096;
+  --text-light: #A0AEC0;
+  
+  --border-light: #EDF2F7;
+  --border-dark: #2D3748;
+  
+  --accent-gold: #D69E2E;
+  --accent-blue: #3182CE;
+  --accent-green: #38A169;
+  
+  --callout-bg: #FFFAF0;
+  --callout-border: #F6E05E;
+  --callout-text: #744210;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  height: 100%;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  color: var(--text-main);
+  background: var(--bg-main);
+  -webkit-font-smoothing: antialiased;
+}
+
+body { display: flex; min-height: 100vh; }
+
+/* ============ SIDEBAR ============ */
+.sidebar {
+  width: 260px;
+  flex-shrink: 0;
+  background: var(--sidebar-bg);
+  color: #fff;
+  padding: 32px 0;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+.sidebar .brand {
+  padding: 0 24px 24px;
+  border-bottom: 1px solid var(--border-dark);
+  margin-bottom: 16px;
+}
+.sidebar .brand .tag {
+  display: inline-block;
+  background: rgba(226, 55, 68, 0.15);
+  color: var(--brand-red);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  padding: 4px 8px;
+  border-radius: 4px;
+  margin-bottom: 12px;
+}
+.sidebar .brand h1 {
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.3;
+  letter-spacing: -0.3px;
+}
+.sidebar nav { display: flex; flex-direction: column; flex: 1; }
+.sidebar nav button {
+  all: unset;
+  cursor: pointer;
+  padding: 12px 24px;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--sidebar-text);
+  border-left: 3px solid transparent;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  transition: all 0.2s ease;
+}
+.sidebar nav button:hover { background: var(--sidebar-hover); color: #fff; }
+.sidebar nav button.active {
+  background: var(--sidebar-hover);
+  color: #fff;
+  border-left-color: var(--brand-red);
+  font-weight: 600;
+}
+.sidebar nav button .dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--text-muted); flex-shrink: 0;
+  transition: background 0.2s ease;
+}
+.sidebar nav button.active .dot { background: var(--brand-red); box-shadow: 0 0 8px rgba(226,55,68,0.5); }
+
+.sidebar .foot {
+  padding: 24px;
+  border-top: 1px solid var(--border-dark);
+  font-size: 11px;
+  color: var(--text-muted);
+  line-height: 1.6;
+}
+
+/* ============ MAIN CONTENT ============ */
+.main { flex: 1; min-width: 0; padding: 40px 48px 80px; overflow-y: auto; }
+
+.section { display: none; }
+.section.active { display: block; animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
+@keyframes slideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+.section-head { margin-bottom: 32px; }
+.kicker {
+  font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;
+  color: var(--brand-red); margin-bottom: 8px;
+}
+h2 { font-size: 28px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 6px; color: #111827; }
+.subtitle { font-size: 14px; color: var(--text-muted); font-weight: 400; }
+
+/* ============ KPI CARDS ============ */
+.kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-bottom: 32px; }
+.kpi-card { 
+  background: var(--bg-card); 
+  border: 1px solid var(--border-light);
+  border-radius: 12px; 
+  padding: 24px; 
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02), 0 2px 4px -1px rgba(0, 0, 0, 0.02);
+  transition: transform 0.2s ease;
+}
+.kpi-card:hover { transform: translateY(-2px); }
+.kpi-card .num { font-size: 32px; font-weight: 800; color: var(--brand-red); letter-spacing: -1px; }
+.kpi-card .lbl { font-size: 12px; color: var(--text-muted); text-transform: uppercase; font-weight: 600; letter-spacing: 0.5px; margin-top: 8px; }
+
+/* ============ CARDS / CHART BOXES ============ */
+.card {
+  background: var(--bg-card); 
+  border: 1px solid var(--border-light); 
+  border-radius: 12px;
+  padding: 24px; 
+  margin-bottom: 24px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02);
+}
+.card-title { font-size: 15px; font-weight: 700; margin-bottom: 4px; color: #111827; }
+.card-sub { font-size: 12.5px; color: var(--text-muted); margin-bottom: 20px; }
+
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+.grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; }
+
+@media (max-width: 1024px) {
+  .grid-2, .grid-3 { grid-template-columns: 1fr; }
+  .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+.finding {
+  background: #F8FAFC; border-left: 3px solid var(--brand-red); border-radius: 0 6px 6px 0;
+  padding: 14px 18px; font-size: 13px; line-height: 1.6; margin-top: 16px; color: var(--text-main);
+}
+.finding b { color: #111827; font-weight: 600; }
+
+.callout {
+  background: var(--callout-bg); border: 1px solid var(--callout-border); border-radius: 8px;
+  padding: 16px 20px; font-size: 13px; color: var(--callout-text); line-height: 1.6;
+}
+.callout b { color: #744210; font-weight: 700; }
+
+/* ============ SVG CHART TOOLTIP ============ */
+.chart-wrap { position: relative; width: 100%; }
+.svg-tooltip {
+  position: absolute; pointer-events: none; background: #111827; color: #fff;
+  font-size: 12px; padding: 6px 10px; border-radius: 6px; white-space: nowrap;
+  opacity: 0; transition: opacity 0.15s ease; transform: translate(-50%, -120%); z-index: 10;
+  font-weight: 500; box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+.svg-tooltip.show { opacity: 1; }
+.bar-el, .dot-el { cursor: pointer; transition: opacity 0.2s; }
+.bar-el:hover { opacity: 0.8; }
+
+/* ============ TOGGLE BUTTONS ============ */
+.toggle-row { display: flex; gap: 8px; margin-bottom: 16px; }
+.toggle-btn {
+  all: unset; cursor: pointer; font-size: 12px; font-weight: 600; padding: 8px 16px;
+  border-radius: 20px; background: #F1F5F9; color: var(--text-muted); border: 1px solid transparent;
+  transition: all 0.2s;
+}
+.toggle-btn.active { background: var(--brand-red-faded); color: var(--brand-red); border-color: rgba(226,55,68,0.2); }
+.toggle-btn:hover:not(.active) { background: #E2E8F0; color: var(--text-main); }
+
+/* ============ LEGEND ============ */
+.legend-row { display: flex; gap: 16px; font-size: 12px; color: var(--text-muted); margin-top: 12px; flex-wrap: wrap; }
+.legend-dot { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 6px; vertical-align: baseline; }
+
+/* ============ TABLE ============ */
+.table-controls { display: flex; gap: 12px; margin-bottom: 16px; align-items: center; flex-wrap: wrap; }
+.search-box {
+  flex: 1; min-width: 200px; padding: 10px 14px; border: 1px solid var(--border-light); border-radius: 8px;
+  font-size: 13px; font-family: inherit; outline: none; transition: border-color 0.2s; background: #F8FAFC;
+}
+.search-box:focus { border-color: var(--brand-red); background: #FFF; box-shadow: 0 0 0 3px rgba(226,55,68,0.1); }
+table.data-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+table.data-table th {
+  background: #F8FAFC; color: var(--text-muted); text-align: left; padding: 12px 16px;
+  font-size: 11px; text-transform: uppercase; font-weight: 600; letter-spacing: 0.5px; cursor: pointer; user-select: none;
+  white-space: nowrap; border-bottom: 2px solid var(--border-light);
+}
+table.data-table th:hover { color: var(--text-main); }
+table.data-table th .arrow { font-size: 10px; opacity: 0.6; margin-left: 4px; }
+table.data-table td { padding: 12px 16px; border-bottom: 1px solid var(--border-light); color: var(--text-main); }
+table.data-table tr:hover td { background: var(--brand-red-faded); }
+.rank-badge {
+  display: inline-block; width: 22px; height: 22px; line-height: 22px; text-align: center;
+  border-radius: 50%; color: #fff; font-weight: 700; font-size: 11px;
+}
+.rank-1 { background: var(--accent-gold); } 
+.rank-2 { background: #94A3B8; }
+.rank-3 { background: #B45309; } 
+.rank-4 { background: var(--text-light); }
+.no-results { padding: 32px; text-align: center; color: var(--text-muted); font-size: 13px; font-style: italic; }
+
+/* ============ SORT BUTTONS (city chart) ============ */
+.sort-row { display: flex; justify-content: flex-end; gap: 8px; margin-bottom: -10px; }
+
+/* ============ ACCORDION ============ */
+.accordion-toggle {
+  all: unset; cursor: pointer; display: flex; align-items: center; gap: 8px;
+  font-size: 12.5px; font-weight: 600; color: var(--brand-red); margin-top: 16px;
+}
+.accordion-toggle .chevron { transition: transform 0.2s; font-size: 10px; }
+.accordion-toggle.open .chevron { transform: rotate(90deg); }
+.accordion-body {
+  display: none; font-size: 13px; color: var(--text-muted); line-height: 1.6;
+  background: #F8FAFC; border: 1px solid var(--border-light); border-radius: 6px; padding: 12px 16px; margin-top: 8px;
+}
+.accordion-body.open { display: block; animation: slideDown 0.2s ease; }
+@keyframes slideDown { from { opacity:0; transform: translateY(-5px); } to { opacity:1; transform:translateY(0); } }
+
+/* ============ MOBILE NAV ============ */
+@media (max-width: 760px) {
+  body { flex-direction: column; }
+  .sidebar { width: 100%; height: auto; position: relative; padding: 20px 0; }
+  .sidebar .brand { padding: 0 20px 16px; }
+  .sidebar nav { flex-direction: row; overflow-x: auto; padding: 0 16px; gap: 8px; }
+  .sidebar nav button { white-space: nowrap; border-left: none; padding: 8px 16px; border-radius: 20px; background: rgba(255,255,255,0.05); }
+  .sidebar nav button.active { border-left-color: transparent; background: var(--brand-red); }
+  .sidebar nav button.active .dot { display: none; }
+  .sidebar .foot { display: none; }
+  .main { padding: 24px; }
+  .kpi-grid { grid-template-columns: 1fr 1fr; gap: 12px; }
+}
+</style>
+</head>
+<body>
+
+<aside class="sidebar">
+  <div class="brand">
+    <span class="tag">Interactive SQL Project</span>
+    <h1>Zomato Delivery<br>Ops Analytics</h1>
+  </div>
+  <nav>
+    <button class="active" data-target="sec-overview"><span class="dot"></span>Overview</button>
+    <button data-target="sec-rootcause"><span class="dot"></span>Root Causes</button>
+    <button data-target="sec-time"><span class="dot"></span>Time Patterns</button>
+    <button data-target="sec-geo"><span class="dot"></span>Geography &amp; Partners</button>
+    <button data-target="sec-reco"><span class="dot"></span>Recommendation</button>
+  </nav>
+  <div class="foot">
+    Built in SQL on PostgreSQL (Neon)<br><br>45,584 real delivery records · Static single-file dashboard
+  </div>
+</aside>
+
+<main class="main">
+  <section class="section active" id="sec-overview">
+    <div class="section-head">
+      <div class="kicker">Executive Summary</div>
+      <h2>Why 3 in 10 Deliveries Arrive Late</h2>
+      <div class="subtitle">45,584 orders measured against a 30-minute delivery promise (45 min for Semi-Urban cities)</div>
+    </div>
+
+    <div class="kpi-grid">
+      <div class="kpi-card"><div class="num">45,584</div><div class="lbl">Total Orders</div></div>
+      <div class="kpi-card"><div class="num">29.8%</div><div class="lbl">SLA Breach Rate</div></div>
+      <div class="kpi-card"><div class="num">26.3m</div><div class="lbl">Avg Delivery Time</div></div>
+      <div class="kpi-card"><div class="num">105k</div><div class="lbl">Minutes Lost</div></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">What this dashboard covers</div>
+      <div class="card-sub">Use the sidebar to move between sections. Every chart is interactive — hover for exact values.</div>
+      <div class="finding">
+        Nearly <b>1 in 3 orders</b> misses its promised delivery window. <b>Root Causes</b> breaks down what
+        actually drives that — traffic, distance, batching, vehicle condition. <b>Time Patterns</b> shows
+        whether the problem is worsening (it isn't) and which hours are worst. <b>Geography &amp; Partners</b>
+        ranks all 22 cities and the top-performing delivery partners. <b>Recommendation</b> closes with a
+        costed ranking of which fix the business should fund first.
+      </div>
+      <div class="callout" style="margin-top:20px;">
+        <b>Headline finding:</b> the intuitive answer — "coach the slow riders" — turns out to be the
+        <b>third-best</b> fix available. See the Recommendation section for the full breakdown.
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="sec-rootcause">
+    <div class="section-head">
+      <div class="kicker">Root Cause Analysis</div>
+      <h2>What Actually Drives a Late Delivery</h2>
+      <div class="subtitle">Hover over any bar for the exact value</div>
+    </div>
+
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-title">Breach Rate by Traffic Condition</div>
+        <div class="card-sub">Jam vs. Low traffic</div>
+        <div class="chart-wrap" id="traffic-chart"></div>
+        <div class="finding"><b>Jam traffic breaches 6.4× more often</b> than Low traffic (50.6% vs 7.9%).</div>
+      </div>
+      <div class="card">
+        <div class="card-title">Breach Rate by Drop Distance</div>
+        <div class="card-sub">Distance shows a threshold effect, not a slope</div>
+        <div class="chart-wrap" id="distance-chart"></div>
+        <div class="finding">Breach rate steps up sharply past <b>~10km</b>, then flattens (45.5% → 45.0%).</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Breach Rate by Orders Batched Per Trip</div>
+      <div class="card-sub">A dispatch decision the business controls directly</div>
+      <div class="chart-wrap" id="batching-chart"></div>
+      <div class="finding">
+        Batching <b>2 or more</b> orders is a near-guaranteed failure — <b>99.9%</b> at 2 batched,
+        <b>100.0%</b> at 3. This is a switch, not a gradual trade-off.
+      </div>
+      <button class="accordion-toggle" data-body="acc-batch"><span class="chevron">▶</span>Why this happens</button>
+      <div class="accordion-body" id="acc-batch">
+        A rider carrying two orders has to complete the first delivery before starting the second — the
+        promised 30-minute window was set assuming one order per trip. Batching was likely introduced to
+        improve rider efficiency (fewer empty return trips), but under the current SLA it trades efficiency
+        directly for reliability.
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Breach Rate by Vehicle Condition</div>
+      <div class="card-sub">0 = Poor, 3 = Excellent — condition 0 covers roughly a third of all orders</div>
+      <div class="chart-wrap" id="vehicle-chart"></div>
+      <div class="finding">
+        Conditions 1 and 2 are <b>statistically identical</b> (23.9% vs 24.0%). Only condition 0 is broken,
+        at <b>41.7%</b> — the single largest controllable lever in the dataset.
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="sec-time">
+    <div class="section-head">
+      <div class="kicker">Trend Analysis</div>
+      <h2>Time-of-Day and Daily Patterns</h2>
+      <div class="subtitle">A stable ~30% average hides real structure underneath</div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Daily Breach Rate Over 8 Weeks</div>
+      <div class="card-sub">Toggle to see the raw daily swing vs. the smoothed 7-day average</div>
+      <div class="toggle-row" id="trend-toggle">
+        <button class="toggle-btn" data-mode="both">Raw + 7-day average</button>
+        <button class="toggle-btn active" data-mode="smoothed">7-day average only</button>
+      </div>
+      <div class="chart-wrap" id="trend-chart"></div>
+      <div class="legend-row">
+        <span><span class="legend-dot" style="background:#A0AEC0;"></span>Daily rate (raw)</span>
+        <span><span class="legend-dot" style="background:var(--brand-red);"></span>7-day moving average</span>
+      </div>
+      <div class="finding">
+        The raw daily rate alternates sharply between a <b>~15–19% "low" band</b> and a <b>~43–48% "high"
+        band</b>, almost every single day, with no correlation to weekday vs. weekend. The 7-day average
+        confirms the true rate is a stable <b>28–34%</b>, matching the 29.8% headline — the problem is not
+        worsening over the window.
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Breach Rate by Hour of Day</div>
+      <div class="card-sub">No orders were placed in hours 1–7 (overnight)</div>
+      <div class="chart-wrap" id="hour-chart"></div>
+      <div class="legend-row">
+        <span><span class="legend-dot" style="background:var(--accent-blue);"></span>Under 15% (Good)</span>
+        <span><span class="legend-dot" style="background:var(--accent-gold);"></span>15–45% (Moderate)</span>
+        <span><span class="legend-dot" style="background:var(--brand-red);"></span>45%+ (Critical)</span>
+      </div>
+      <div class="finding">
+        Mornings (08:00–10:00) run a clean <b>1.6–2.8%</b> breach rate. The evening window
+        <b>19:00–21:00</b> is worst at <b>~50%</b>. Evening-peak and late-night hours carry near-identical
+        rider load, ruling out simple understaffing as the cause of the evening spike.
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="sec-geo">
+    <div class="section-head">
+      <div class="kicker">Geography &amp; Partners</div>
+      <h2>No Problem City — And the Best Performers</h2>
+      <div class="subtitle">Every city lands in a narrow band; a handful of riders far outperform the average</div>
+    </div>
+
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-title">Breach Rate by City</div>
+        <div class="sort-row" id="city-sort">
+          <button class="toggle-btn active" data-sort="value">Sort by Rate</button>
+          <button class="toggle-btn" data-sort="name">Sort A–Z</button>
+        </div>
+        <div class="chart-wrap" id="city-chart" style="margin-top:16px;"></div>
+        <div class="finding">
+          Full range: <b>28.6% – 33.0%</b> across all 22 cities — just 4.4 points. If a specific city were
+          poorly managed, its rate would stand out sharply. It doesn't, pointing to a
+          <b>systemic cause</b>, not local execution.
+        </div>
+      </div>
+
+      <div class="card" id="partner-table">
+        <div class="card-title">Top 10 Delivery Partners</div>
+        <div class="card-sub">Ranked by lowest breach rate — search or sort to explore</div>
+        <div class="table-controls">
+          <input type="text" class="search-box" id="partner-search" placeholder="Search partner code or city...">
+        </div>
+        <div style="overflow-x:auto;">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th style="width:8%;">#</th>
+                <th data-key="partner_code">Partner Code <span class="arrow"></span></th>
+                <th data-key="city_name">City <span class="arrow"></span></th>
+                <th data-key="late_pct" style="text-align:right;">Breach Rate <span class="arrow">▲</span></th>
+              </tr>
+            </thead>
+            <tbody id="partner-tbody"></tbody>
+          </table>
+        </div>
+        <div class="finding">
+          These riders operate under the same conditions as everyone else, yet post breach rates from
+          <b>0.0% to 7.7%</b> — far below the 29.8% average.
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="sec-reco">
+    <div class="section-head">
+      <div class="kicker">The Recommendation</div>
+      <h2>Which Fix Actually Pays — Costed and Ranked</h2>
+      <div class="subtitle">Each programme modelled as a counterfactual: how many of the 13,597 real late orders would it have rescued?</div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">% of ALL Breaches Removed, by Programme</div>
+      <div class="chart-wrap" id="reco-chart"></div>
+      <div class="callout" style="margin-top:20px;">
+        <b>The intuitive fix ranks third.</b> "Coach the slow riders" — the answer most ops teams reach for
+        first — recovers only 3.7% of all breaches. <b>Fleet maintenance</b> and a <b>batching cap</b> each
+        outperform it, and together address roughly <b>4× the impact</b> for far less organisational effort.
+      </div>
+    </div>
+
+    <div class="grid-3">
+      <div class="card">
+        <div class="card-title" style="color:var(--accent-green);">① Fleet Maintenance</div>
+        <div class="finding" style="border-left-color:var(--accent-green);">Bring condition-0 vehicles up to condition 1. Recovers <b>15.0%</b> of all breaches — 32.6% of its own affected orders.</div>
+      </div>
+      <div class="card">
+        <div class="card-title" style="color:var(--accent-blue);">② Cap Batching at 1</div>
+        <div class="finding" style="border-left-color:var(--accent-blue);">Never assign 2+ orders per trip. Recovers <b>13.2%</b> of all breaches — the most surgical fix (76.8% of its own scope).</div>
+      </div>
+      <div class="card">
+        <div class="card-title" style="color:var(--accent-gold);">③ Coach Below-Median</div>
+        <div class="finding" style="border-left-color:var(--accent-gold);">Lift bottom riders to their city's median. Recovers only <b>3.7%</b> of all breaches — intuitive, but the weakest of the four.</div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<script>
+const DATA = {
+  "kpi": { "total_orders": 45584, "late_pct": 29.8, "avg_delivery_min": 26.3, "total_minutes_lost": 105671 },
+  "city": [
+    { "city_name": "Dehradun", "late_pct": 33.0 },
+    { "city_name": "Prayagraj", "late_pct": 32.6 },
+    { "city_name": "Aurangabad", "late_pct": 31.9 },
+    { "city_name": "Jaipur", "late_pct": 31.9 },
+    { "city_name": "Bhopal", "late_pct": 31.7 },
+    { "city_name": "Ludhiana", "late_pct": 31.4 },
+    { "city_name": "Agra", "late_pct": 31.1 },
+    { "city_name": "Hyderabad", "late_pct": 30.5 },
+    { "city_name": "Ranchi", "late_pct": 29.8 },
+    { "city_name": "Vadodara", "late_pct": 29.7 },
+    { "city_name": "Pune", "late_pct": 29.6 },
+    { "city_name": "Coimbatore", "late_pct": 29.6 },
+    { "city_name": "Kanpur", "late_pct": 29.5 },
+    { "city_name": "Chennai", "late_pct": 29.5 },
+    { "city_name": "Kolkata", "late_pct": 29.4 },
+    { "city_name": "Goa", "late_pct": 29.2 },
+    { "city_name": "Indore", "late_pct": 29.2 },
+    { "city_name": "Bengaluru", "late_pct": 29.1 },
+    { "city_name": "Mumbai", "late_pct": 29.0 },
+    { "city_name": "Surat", "late_pct": 29.0 },
+    { "city_name": "Kochi", "late_pct": 28.7 },
+    { "city_name": "Mysuru", "late_pct": 28.6 }
+  ],
+  "trend": [
+    { "order_date": "2022-02-11", "late_pct": 17.8, "ma7": 17.8 }, { "order_date": "2022-02-12", "late_pct": 45.6, "ma7": 31.7 },
+    { "order_date": "2022-02-13", "late_pct": 17.0, "ma7": 26.8 }, { "order_date": "2022-02-14", "late_pct": 45.7, "ma7": 31.52 },
+    { "order_date": "2022-02-15", "late_pct": 16.3, "ma7": 28.48 }, { "order_date": "2022-02-16", "late_pct": 47.3, "ma7": 31.62 },
+    { "order_date": "2022-02-17", "late_pct": 17.6, "ma7": 29.61 }, { "order_date": "2022-02-18", "late_pct": 45.5, "ma7": 33.57 },
+    { "order_date": "2022-03-01", "late_pct": 15.4, "ma7": 29.26 }, { "order_date": "2022-03-02", "late_pct": 43.9, "ma7": 33.1 },
+    { "order_date": "2022-03-03", "late_pct": 15.7, "ma7": 28.81 }, { "order_date": "2022-03-04", "late_pct": 44.1, "ma7": 32.79 },
+    { "order_date": "2022-03-05", "late_pct": 16.9, "ma7": 28.44 }, { "order_date": "2022-03-06", "late_pct": 45.3, "ma7": 32.4 },
+    { "order_date": "2022-03-07", "late_pct": 14.8, "ma7": 28.01 }, { "order_date": "2022-03-08", "late_pct": 45.6, "ma7": 32.33 },
+    { "order_date": "2022-03-09", "late_pct": 17.6, "ma7": 28.57 }, { "order_date": "2022-03-10", "late_pct": 46.9, "ma7": 33.03 },
+    { "order_date": "2022-03-11", "late_pct": 16.4, "ma7": 29.07 }, { "order_date": "2022-03-12", "late_pct": 45.2, "ma7": 33.11 },
+    { "order_date": "2022-03-13", "late_pct": 17.4, "ma7": 29.13 }, { "order_date": "2022-03-14", "late_pct": 46.1, "ma7": 33.6 },
+    { "order_date": "2022-03-15", "late_pct": 17.8, "ma7": 29.63 }, { "order_date": "2022-03-16", "late_pct": 45.4, "ma7": 33.6 },
+    { "order_date": "2022-03-17", "late_pct": 16.0, "ma7": 29.19 }, { "order_date": "2022-03-18", "late_pct": 48.0, "ma7": 33.7 },
+    { "order_date": "2022-03-19", "late_pct": 14.8, "ma7": 29.36 }, { "order_date": "2022-03-20", "late_pct": 45.7, "ma7": 33.4 },
+    { "order_date": "2022-03-21", "late_pct": 17.6, "ma7": 29.33 }, { "order_date": "2022-03-23", "late_pct": 46.2, "ma7": 33.39 },
+    { "order_date": "2022-03-24", "late_pct": 16.6, "ma7": 29.27 }, { "order_date": "2022-03-25", "late_pct": 45.1, "ma7": 33.43 },
+    { "order_date": "2022-03-26", "late_pct": 17.1, "ma7": 29.01 }, { "order_date": "2022-03-27", "late_pct": 44.9, "ma7": 33.31 },
+    { "order_date": "2022-03-28", "late_pct": 18.6, "ma7": 29.44 }, { "order_date": "2022-03-29", "late_pct": 45.4, "ma7": 33.41 },
+    { "order_date": "2022-03-30", "late_pct": 16.7, "ma7": 29.2 }, { "order_date": "2022-03-31", "late_pct": 42.9, "ma7": 32.96 },
+    { "order_date": "2022-04-01", "late_pct": 15.7, "ma7": 28.76 }, { "order_date": "2022-04-02", "late_pct": 43.5, "ma7": 32.53 },
+    { "order_date": "2022-04-03", "late_pct": 16.0, "ma7": 28.4 }, { "order_date": "2022-04-04", "late_pct": 43.4, "ma7": 31.94 },
+    { "order_date": "2022-04-05", "late_pct": 17.1, "ma7": 27.9 }, { "order_date": "2022-04-06", "late_pct": 43.7, "ma7": 31.76 }
+  ],
+  "hour": [
+    { "order_hour": 0, "late_pct": 9.8, "orders": 430 }, { "order_hour": 8, "late_pct": 2.8, "orders": 1817 },
+    { "order_hour": 9, "late_pct": 1.6, "orders": 1947 }, { "order_hour": 10, "late_pct": 2.2, "orders": 1991 },
+    { "order_hour": 11, "late_pct": 30.0, "orders": 1961 }, { "order_hour": 12, "late_pct": 32.0, "orders": 892 },
+    { "order_hour": 13, "late_pct": 35.5, "orders": 783 }, { "order_hour": 14, "late_pct": 33.8, "orders": 791 },
+    { "order_hour": 15, "late_pct": 15.8, "orders": 873 }, { "order_hour": 16, "late_pct": 14.8, "orders": 709 },
+    { "order_hour": 17, "late_pct": 36.1, "orders": 4277 }, { "order_hour": 18, "late_pct": 35.1, "orders": 4479 },
+    { "order_hour": 19, "late_pct": 49.4, "orders": 4593 }, { "order_hour": 20, "late_pct": 50.6, "orders": 4538 },
+    { "order_hour": 21, "late_pct": 50.1, "orders": 4685 }, { "order_hour": 22, "late_pct": 14.6, "orders": 4576 },
+    { "order_hour": 23, "late_pct": 12.3, "orders": 4511 }
+  ],
+  "distance": [
+    { "distance_band": "A. under 5 km", "late_pct": 12.4 }, { "distance_band": "B. 5-10 km", "late_pct": 21.1 },
+    { "distance_band": "C. 10-15 km", "late_pct": 45.5 }, { "distance_band": "D. 15 km+", "late_pct": 45.0 }
+  ],
+  "batching": [
+    { "multiple_deliveries": 0, "late_pct": 18.1 }, { "multiple_deliveries": 1, "late_pct": 30.2 },
+    { "multiple_deliveries": 2, "late_pct": 99.9 }, { "multiple_deliveries": 3, "late_pct": 100.0 }
+  ],
+  "traffic": [
+    { "road_traffic_density": "Jam", "late_pct": 50.6 }, { "road_traffic_density": "High", "late_pct": 33.6 },
+    { "road_traffic_density": "Medium", "late_pct": 32.5 }, { "road_traffic_density": "Low", "late_pct": 7.9 }
+  ],
+  "vehicle": [
+    { "vehicle_condition": 0, "late_pct": 41.7 }, { "vehicle_condition": 1, "late_pct": 23.9 },
+    { "vehicle_condition": 2, "late_pct": 24.0 }, { "vehicle_condition": 3, "late_pct": 30.6 }
+  ],
+  "partners": [
+    { "partner_code": "DEHRES20DEL03", "city_name": "Dehradun", "late_pct": 0.0 },
+    { "partner_code": "ALHRES11DEL01", "city_name": "Prayagraj", "late_pct": 6.7 },
+    { "partner_code": "KNPRES13DEL02", "city_name": "Kanpur", "late_pct": 7.7 },
+    { "partner_code": "KNPRES14DEL02", "city_name": "Kanpur", "late_pct": 7.7 },
+    { "partner_code": "AURGRES09DEL02", "city_name": "Aurangabad", "late_pct": 7.7 },
+    { "partner_code": "KNPRES03DEL01", "city_name": "Kanpur", "late_pct": 7.7 },
+    { "partner_code": "GOARES12DEL01", "city_name": "Goa", "late_pct": 7.7 },
+    { "partner_code": "KOCRES02DEL02", "city_name": "Kochi", "late_pct": 7.7 },
+    { "partner_code": "AURGRES20DEL02", "city_name": "Aurangabad", "late_pct": 7.7 },
+    { "partner_code": "KOLRES01DEL02", "city_name": "Kolkata", "late_pct": 7.7 }
+  ],
+  "recommendation": [
+    { "programme": "Fleet maintenance", "detail": "Bring condition-0 vehicles to condition 1", "pct": 15.0 },
+    { "programme": "Cap batching at 1", "detail": "Never assign 2+ orders per trip", "pct": 13.2 },
+    { "programme": "Coach below-median riders", "detail": "Lift bottom riders to their city's median", "pct": 3.7 },
+    { "programme": "45-min SLA on festivals", "detail": "Stop promising 30 min on festival days", "pct": 3.5 }
+  ]
+};
+
+/* ============================================================
+   SVG Charts Rendering — vanilla JS
+   ============================================================ */
+
+const NS = "http://www.w3.org/2000/svg";
+const COLORS = { red: "#E23744", navy: "#111827", gold: "#D69E2E", blue: "#3182CE", grid: "#EDF2F7", muted: "#A0AEC0" };
+
+function svgEl(tag, attrs) {
+  const el = document.createElementNS(NS, tag);
+  for (const k in attrs) el.setAttribute(k, attrs[k]);
+  return el;
+}
+
+function attachTooltip(container, el, text) {
+  const tip = container.querySelector(".svg-tooltip");
+  el.addEventListener("mousemove", (e) => {
+    const rect = container.getBoundingClientRect();
+    tip.style.left = (e.clientX - rect.left) + "px";
+    tip.style.top = (e.clientY - rect.top) + "px";
+    tip.textContent = text;
+    tip.classList.add("show");
+  });
+  el.addEventListener("mouseleave", () => tip.classList.remove("show"));
+}
+
+/* ---------- Vertical column chart ---------- */
+function verticalBarChart(containerId, labels, values, opts = {}) {
+  const container = document.getElementById(containerId);
+  const width = opts.width || 480, height = opts.height || 260;
+  const padL = 10, padR = 10, padT = 40, padB = 40;
+  const plotW = width - padL - padR, plotH = height - padT - padB;
+  const n = labels.length;
+  const gap = (plotW / n) * 0.3;
+  const bw = (plotW / n) - gap;
+  const maxVal = opts.maxVal || Math.max(...values) * 1.15;
+  const fmt = opts.fmt || ((v) => v.toFixed(1) + "%");
+  const colorFn = opts.colorFn || (() => COLORS.red);
+
+  const svg = svgEl("svg", { viewBox: `0 0 ${width} ${height}`, style: "width:100%;height:auto;display:block;" });
+  [0, 0.25, 0.5, 0.75, 1].forEach((frac) => {
+    const y = padT + plotH * (1 - frac);
+    svg.appendChild(svgEl("line", { x1: padL, y1: y, x2: width - padR, y2: y, stroke: COLORS.grid, "stroke-width": 1 }));
+  });
+
+  labels.forEach((lab, i) => {
+    const val = values[i];
+    const x = padL + i * (plotW / n) + gap / 2;
+    let bh = (val / maxVal) * plotH;
+    if (val === 0) bh = 0; // Fixes 1px bar bug when val is 0
+    const y = padT + plotH - bh;
+    
+    const rect = svgEl("rect", { x, y, width: bw, height: Math.max(bh, 1), rx: 4, fill: colorFn(val, i), class: "bar-el" });
+    svg.appendChild(rect);
+    attachTooltip(container, rect, `${lab}: ${fmt(val)}`);
+
+    const t1 = svgEl("text", { x: x + bw / 2, y: y - 10, "font-size": 13, "font-weight": 700, fill: COLORS.navy, "text-anchor": "middle", "font-family": "Inter, sans-serif" });
+    t1.textContent = fmt(val);
+    svg.appendChild(t1);
+
+    const t2 = svgEl("text", { x: x + bw / 2, y: height - padB + 20, "font-size": 12, fill: COLORS.muted, "text-anchor": "middle", "font-family": "Inter, sans-serif" });
+    t2.textContent = lab;
+    svg.appendChild(t2);
+  });
+
+  container.innerHTML = '<div class="svg-tooltip"></div>';
+  container.appendChild(svg);
+}
+
+/* ---------- Horizontal bar chart ---------- */
+function horizontalBarChart(containerId, items, opts = {}) {
+  const container = document.getElementById(containerId);
+  const rowH = opts.rowH || 24, labelW = opts.labelW || 110, width = opts.width || 560;
+  const height = items.length * rowH + 20;
+  const padT = 10;
+  const plotW = width - labelW - 60;
+  const maxVal = opts.maxVal || Math.max(...items.map((d) => d.value)) * 1.08;
+  const fmt = opts.fmt || ((v) => v.toFixed(1) + "%");
+  const colorFn = opts.colorFn || (() => COLORS.red);
+
+  const svg = svgEl("svg", { viewBox: `0 0 ${width} ${height}`, style: "width:100%;height:auto;display:block;" });
+  items.forEach((d, i) => {
+    const y = padT + i * rowH;
+    const bw = (d.value / maxVal) * plotW;
+    const lbl = svgEl("text", { x: labelW - 8, y: y + rowH * 0.65, "font-size": 12, fill: COLORS.navy, "text-anchor": "end", "font-family": "Inter, sans-serif" });
+    lbl.textContent = d.label;
+    svg.appendChild(lbl);
+    
+    const rect = svgEl("rect", { x: labelW, y: y + 2, width: Math.max(bw, 1), height: rowH - 6, rx: 4, fill: colorFn(d.value, i), class: "bar-el" });
+    svg.appendChild(rect);
+    attachTooltip(container, rect, `${d.label}: ${fmt(d.value)}`);
+    
+    const val = svgEl("text", { x: labelW + bw + 8, y: y + rowH * 0.65, "font-size": 12, "font-weight": 600, fill: COLORS.navy, "font-family": "Inter, sans-serif" });
+    val.textContent = fmt(d.value);
+    svg.appendChild(val);
+  });
+
+  container.innerHTML = '<div class="svg-tooltip"></div>';
+  container.appendChild(svg);
+}
+
+/* ---------- Trend line chart ---------- */
+function trendChart(containerId, trendData, showRaw = true) {
+  const container = document.getElementById(containerId);
+  const width = 860, height = 300;
+  const padL = 40, padR = 20, padT = 20, padB = 30;
+  const plotW = width - padL - padR, plotH = height - padT - padB;
+  const n = trendData.length;
+  const mx = 52, mn = 10;
+
+  const xy = (i, val) => {
+    const x = padL + (i / (n - 1)) * plotW;
+    const y = padT + plotH * (1 - (val - mn) / (mx - mn));
+    return [x, y];
+  };
+
+  const svg = svgEl("svg", { viewBox: `0 0 ${width} ${height}`, style: "width:100%;height:auto;display:block;" });
+  [10, 20, 30, 40, 50].forEach((val) => {
+    const [, y] = xy(0, val);
+    svg.appendChild(svgEl("line", { x1: padL, y1: y, x2: width - padR, y2: y, stroke: COLORS.grid, "stroke-width": 1 }));
+    const t = svgEl("text", { x: padL - 8, y: y + 4, "font-size": 11, fill: COLORS.muted, "text-anchor": "end", "font-family": "Inter, sans-serif" });
+    t.textContent = val + "%";
+    svg.appendChild(t);
+  });
+
+  if (showRaw) {
+    const rawPts = trendData.map((d, i) => xy(i, d.late_pct).join(",")).join(" ");
+    svg.appendChild(svgEl("polyline", { points: rawPts, fill: "none", stroke: COLORS.muted, "stroke-width": 1.5, opacity: 0.4 }));
+    trendData.forEach((d, i) => {
+      const [x, y] = xy(i, d.late_pct);
+      const c = svgEl("circle", { cx: x, cy: y, r: 3.5, fill: COLORS.muted, opacity: 0.6, class: "dot-el" });
+      svg.appendChild(c);
+      attachTooltip(container, c, `${d.order_date}: ${d.late_pct.toFixed(1)}%`);
+    });
+  }
+
+  const maPts = trendData.map((d, i) => xy(i, d.ma7).join(",")).join(" ");
+  svg.appendChild(svgEl("polyline", { points: maPts, fill: "none", stroke: COLORS.red, "stroke-width": 3 }));
+  trendData.forEach((d, i) => {
+    const [x, y] = xy(i, d.ma7);
+    const c = svgEl("circle", { cx: x, cy: y, r: 4, fill: COLORS.red, opacity: 0, class: "dot-el" }); // hidden trigger
+    svg.appendChild(c);
+    attachTooltip(container, c, `${d.order_date} (7-day avg): ${d.ma7.toFixed(1)}%`);
+  });
+
+  const seen = new Set();
+  trendData.forEach((d, i) => {
+    const key = d.order_date.slice(0, 7);
+    if (!seen.has(key)) {
+      seen.add(key);
+      const [x] = xy(i, mn);
+      const monthName = new Date(d.order_date).toLocaleString("en-US", { month: "short" });
+      const t = svgEl("text", { x, y: height - 10, "font-size": 12, fill: COLORS.muted, "font-family": "Inter, sans-serif" });
+      t.textContent = monthName;
+      svg.appendChild(t);
+    }
+  });
+
+  container.innerHTML = '<div class="svg-tooltip"></div>';
+  container.appendChild(svg);
+}
+
+/* ---------- Hour-of-day chart ---------- */
+function hourChart(containerId, hourData) {
+  const container = document.getElementById(containerId);
+  const width = 860, height = 280;
+  const padL = 40, padR = 20, padT = 20, padB = 30;
+  const plotW = width - padL - padR, plotH = height - padT - padB;
+  const n = 24;
+  const bw = (plotW / n) * 0.65;
+  const gap = (plotW / n) - bw;
+  const mx = 55;
+
+  const byHour = {};
+  hourData.forEach((d) => (byHour[d.order_hour] = d));
+
+  const svg = svgEl("svg", { viewBox: `0 0 ${width} ${height}`, style: "width:100%;height:auto;display:block;" });
+  [0, 10, 20, 30, 40, 50].forEach((val) => {
+    const y = padT + plotH * (1 - val / mx);
+    svg.appendChild(svgEl("line", { x1: padL, y1: y, x2: width - padR, y2: y, stroke: COLORS.grid, "stroke-width": 1 }));
+    const t = svgEl("text", { x: padL - 8, y: y + 4, "font-size": 11, fill: COLORS.muted, "text-anchor": "end", "font-family": "Inter, sans-serif" });
+    t.textContent = val + "%";
+    svg.appendChild(t);
+  });
+
+  for (let h = 0; h < 24; h++) {
+    const x = padL + h * (plotW / n) + gap / 2;
+    const d = byHour[h];
+    if (d) {
+      const v = d.late_pct;
+      const bh = (v / mx) * plotH;
+      const y = padT + plotH - bh;
+      const color = v >= 45 ? COLORS.red : v < 15 ? COLORS.blue : COLORS.gold;
+      const rect = svgEl("rect", { x, y, width: bw, height: Math.max(bh, 1), rx: 4, fill: color, class: "bar-el" });
+      svg.appendChild(rect);
+      attachTooltip(container, rect, `${h}:00 — ${v.toFixed(1)}% late, ${d.orders} orders`);
+    } else {
+      const t = svgEl("text", { x: x + bw / 2, y: padT + plotH - 6, "font-size": 11, fill: COLORS.muted, "text-anchor": "middle", "font-family": "Inter, sans-serif" });
+      t.textContent = "–";
+      svg.appendChild(t);
+    }
+    const lbl = svgEl("text", { x: x + bw / 2, y: height - 10, "font-size": 11, fill: COLORS.muted, "text-anchor": "middle", "font-family": "Inter, sans-serif" });
+    lbl.textContent = h;
+    svg.appendChild(lbl);
+  }
+
+  container.innerHTML = '<div class="svg-tooltip"></div>';
+  container.appendChild(svg);
+}
+
+/* ============================================================
+   Interactivity Handlers
+   ============================================================ */
+
+function initNav() {
+  const buttons = document.querySelectorAll(".sidebar nav button");
+  const sections = document.querySelectorAll(".section");
+  buttons.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      buttons.forEach((b) => b.classList.remove("active"));
+      sections.forEach((s) => s.classList.remove("active"));
+      btn.classList.add("active");
+      document.getElementById(btn.dataset.target).classList.add("active");
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    });
+  });
+}
+
+function initAccordions() {
+  document.querySelectorAll(".accordion-toggle").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      btn.classList.toggle("open");
+      const body = document.getElementById(btn.dataset.body);
+      body.classList.toggle("open");
+    });
+  });
+}
+
+function initTrendToggle(trendData) {
+  const btns = document.querySelectorAll("#trend-toggle .toggle-btn");
+  btns.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      btns.forEach((b) => b.classList.remove("active"));
+      btn.classList.add("active");
+      trendChart("trend-chart", trendData, btn.dataset.mode === "both");
+    });
+  });
+}
+
+function initCitySort(cityData) {
+  let mode = "value";
+  const render = () => {
+    let items = cityData.map((d) => ({ label: d.city_name, value: d.late_pct }));
+    if (mode === "value") items.sort((a, b) => b.value - a.value);
+    else items.sort((a, b) => a.label.localeCompare(b.label));
+    horizontalBarChart("city-chart", items, { rowH: 22, labelW: 95, width: 560, maxVal: 35, colorFn: () => COLORS.blue });
+  };
+  document.querySelectorAll("#city-sort .toggle-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll("#city-sort .toggle-btn").forEach((b) => b.classList.remove("active"));
+      btn.classList.add("active");
+      mode = btn.dataset.sort;
+      render();
+    });
+  });
+  render();
+}
+
+function initPartnerTable(partnerData) {
+  const tbody = document.getElementById("partner-tbody");
+  const searchBox = document.getElementById("partner-search");
+  let sortKey = "late_pct", sortDir = 1;
+  let data = [...partnerData];
+
+  function render() {
+    const q = searchBox.value.trim().toLowerCase();
+    let rows = data.filter(
+      (d) => d.partner_code.toLowerCase().includes(q) || d.city_name.toLowerCase().includes(q)
+    );
+    rows.sort((a, b) => {
+      let av = a[sortKey], bv = b[sortKey];
+      if (typeof av === "string") return sortDir * av.localeCompare(bv);
+      return sortDir * (av - bv);
+    });
+    tbody.innerHTML = "";
+    if (rows.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="4" class="no-results">No partners match that search.</td></tr>';
+      return;
+    }
+    rows.forEach((d, i) => {
+      const rankClass = i === 0 ? "rank-1" : i === 1 ? "rank-2" : i === 2 ? "rank-3" : "rank-4";
+      const tr = document.createElement("tr");
+      tr.innerHTML = `<td><span class="rank-badge ${rankClass}">${i + 1}</span></td>
+        <td style="font-family:monospace;">${d.partner_code}</td><td>${d.city_name}</td>
+        <td style="text-align:right;font-weight:700;">${d.late_pct.toFixed(1)}%</td>`;
+      tbody.appendChild(tr);
+    });
+  }
+
+  searchBox.addEventListener("input", render);
+  document.querySelectorAll("#partner-table th[data-key]").forEach((th) => {
+    th.addEventListener("click", () => {
+      const key = th.dataset.key;
+      if (sortKey === key) sortDir *= -1;
+      else { sortKey = key; sortDir = 1; }
+      document.querySelectorAll("#partner-table th .arrow").forEach((a) => (a.textContent = ""));
+      th.querySelector(".arrow").textContent = sortDir === 1 ? "▲" : "▼";
+      render();
+    });
+  });
+  render();
+}
+
+// ---- Render Init ----
+document.addEventListener("DOMContentLoaded", function () {
+  initNav();
+  initAccordions();
+
+  // Highlight 'Jam' as critical, others as standard
+  verticalBarChart("traffic-chart",
+    DATA.traffic.map(d => d.road_traffic_density),
+    DATA.traffic.map(d => d.late_pct),
+    { width: 400, height: 260, maxVal: 55, colorFn: (v, i) => i === 0 ? COLORS.red : '#94A3B8' }
+  );
+
+  verticalBarChart("distance-chart",
+    DATA.distance.map(d => d.distance_band.replace(/^[A-D]\. /, "")),
+    DATA.distance.map(d => d.late_pct),
+    { width: 400, height: 260, maxVal: 50, colorFn: () => COLORS.blue }
+  );
+
+  verticalBarChart("batching-chart",
+    DATA.batching.map(d => d.multiple_deliveries + " batched"),
+    DATA.batching.map(d => d.late_pct),
+    { width: 640, height: 280, maxVal: 110, colorFn: (v) => v > 50 ? COLORS.red : COLORS.blue }
+  );
+
+  verticalBarChart("vehicle-chart",
+    ["0 (Poor)", "1 (Fair)", "2 (Good)", "3 (Excellent)"],
+    DATA.vehicle.map(d => d.late_pct),
+    { width: 640, height: 280, maxVal: 48, colorFn: (v, i) => i === 0 ? COLORS.red : '#94A3B8' }
+  );
+
+  trendChart("trend-chart", DATA.trend, false);
+  initTrendToggle(DATA.trend);
+
+  hourChart("hour-chart", DATA.hour);
+
+  initCitySort(DATA.city);
+  initPartnerTable(DATA.partners);
+
+  horizontalBarChart("reco-chart",
+    DATA.recommendation.map(d => ({ label: d.programme, value: d.pct })),
+    { rowH: 52, labelW: 200, width: 760, maxVal: 17, colorFn: (v, i) => {
+        return [COLORS.green, COLORS.blue, COLORS.gold, COLORS.muted][i] || COLORS.red;
+    }}
+  );
+});
+</script>
+
+</body>
+</html>

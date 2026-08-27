@@ -53,8 +53,6 @@ zomato-delivery-ops-analytics/
 ├── dashboard/
 │   └── index.html                  # standalone interactive dashboard (no dependencies)
 └── docs/
-    ├── results-report.pdf
-    ├── project-brief.pdf
     └── presentation-deck.pdf
 ```
 
