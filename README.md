@@ -42,7 +42,6 @@ Four candidate fixes were modelled as **counterfactuals** in SQL — for each, e
 ```
 zomato-delivery-ops-analytics/
 ├── README.md
-├── LICENSE
 ├── sql/
 │   ├── 01_schema.sql               # star schema: staging, core, mart
 │   ├── 02_cleaning.sql             # load, profile, repair, normalise
